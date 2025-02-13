@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 
 	vm_fd = ioctl(sys_fd, KVM_CREATE_VM, 0);
 	if (vm_fd < 0) {
-		pr_err("KVM_CREATE_VM ioctl");
+		printf("KVM_CREATE_VM ioctl");
 		ret = vm_fd;
 		goto err_sys_fd;
 	}

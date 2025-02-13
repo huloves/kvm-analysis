@@ -16,12 +16,12 @@ $(shell mkdir -p $(BUILD_DIR))
 
 .PHONY: all clean toolchain
 
-all: $(BUILD_DIR)/get_version
+all: $(BUILD_DIR)/create_vm
 
-# 编译 get_version 并将输出放入 BUILD_DIR
-$(BUILD_DIR)/get_version: get_version.c toolchain
-	@echo "Compiling get_version.c..."
-	$(CC) $(INCLUDES) get_version.c --static -g -o $(BUILD_DIR)/get_version
+# 编译 create_vm 并将输出放入 BUILD_DIR
+$(BUILD_DIR)/create_vm: create_vm.c toolchain
+	@echo "Compiling create_vm.c..."
+	$(CC) $(INCLUDES) create_vm.c --static -g -o $(BUILD_DIR)/create_vm
 
 # 检查工具链是否存在
 toolchain:
@@ -36,4 +36,4 @@ toolchain:
 	fi
 
 clean:
-	rm -f $(BUILD_DIR)/get_version
+	rm -f $(BUILD_DIR)/create_vm
