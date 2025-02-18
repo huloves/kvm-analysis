@@ -16,12 +16,6 @@ fi
 
 function linux_vm()
 {
-	# 编译mini_vm应用程序
-	cd mini_vm
-	make clean
-	make all
-	cd -
-
 	# 编译linux内核
 	cd linux-5.9
 	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN make defconfig
@@ -29,23 +23,66 @@ function linux_vm()
 	cd -
 
 	# 解压rootfs.cpio
-	mkdir -p rootfs
-	cd rootfs
+	rm -rf rootfs
+	mkdir -p rootfs/temp/
+	cd rootfs/temp/
+	cp ../../rootfs.cpio ../
 	cpio -idmv < ../rootfs.cpio
 	cd -
 
 	qemu-system-aarch64 \
 		-cpu cortex-a53 \
 		-m 512M \
-		-machine type=virt,virtualization=on,gic-version=3 \
+		-machine type=virt,virtualization=on \
 		-nographic \
 		-smp 1 \
 		-kernel linux-5.9/arch/arm64/boot/Image  \
-		-initrd rootfs.cpio   \
+		-initrd rootfs/rootfs.cpio   \
 		-append "rdinit=/linuxrc console=ttyAMA0"
 	
 	# 虚拟机内执行该命令
 	# ./lkvm run -k Image -i rootfs.kvm.cpio -p "rdinit=/linuxrc console=ttyAMA0" -m 320 -c 1 --name guest-18
+}
+
+function mini_vm()
+{
+	# 编译mini_vm应用程序
+	cd mini_vm/
+	make clean
+	make all
+	cd -
+
+	# 编译linux内核
+	cd linux-5.9/
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN make defconfig
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN make all -j32
+	cd -
+
+	# 解压rootfs.cpio到rootfs/temp目录
+	rm -rf rootfs
+	mkdir -p rootfs/temp/
+	cd rootfs/temp/
+	cp ../../rootfs.cpio ../
+	cpio -idmv < ../rootfs.cpio
+
+	# 将tiny_kvmtool和tiny_kernel打包进cpio中
+	cp ${SCRIPT_DIR}/build/tiny_kvmtool ${SCRIPT_DIR}/build/tiny_kernel.bin ./
+	cd ..
+	( cd temp && find . | cpio -o -H newc ) > rootfs.cpio
+	cd ..
+
+	qemu-system-aarch64 \
+		-cpu cortex-a53 \
+		-m 512M \
+		-machine type=virt,virtualization=on \
+		-nographic \
+		-smp 1 \
+		-kernel linux-5.9/arch/arm64/boot/Image  \
+		-initrd rootfs/rootfs.cpio   \
+		-append "rdinit=/linuxrc console=ttyAMA0"
+	
+	# 虚拟机内执行该命令
+	# ./tiny_kvmtool
 }
 
 #
