@@ -85,6 +85,51 @@ function mini_vm()
 	# ./tiny_kvmtool
 }
 
+function virq_hwirq()
+{
+	ABS_LINUX_PATH=$(realpath linux-5.9/)
+
+	# 交叉编译内核模块准备工作
+	cd linux-5.9/
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN make defconfig
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN make prepare
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN make scripts
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN make modules
+	cd -
+	
+	# 交叉编译内核模块
+	cd vgicv2/hwirq_module/
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN KERNEL_PATH=$ABS_LINUX_PATH make all
+	cd -
+
+	# 解压rootfs.cpio到rootfs/temp目录
+	rm -rf rootfs
+	mkdir -p rootfs/temp/
+	cd rootfs/temp/
+	cp ../../rootfs.cpio ../
+	cpio -idmv < ../rootfs.cpio
+
+	# 将hwirq_module打包进cpio中
+	cp -r ${SCRIPT_DIR}/vgicv2/hwirq_module ./
+	cd ..
+	( cd temp && find . | cpio -o -H newc ) > rootfs.cpio
+	cd ..
+
+	cd vgicv2/hwirq_module/
+	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN KERNEL_PATH=$ABS_LINUX_PATH make clean
+	cd -
+
+	qemu-system-aarch64 \
+		-cpu cortex-a53 \
+		-m 512M \
+		-machine type=virt,virtualization=on \
+		-nographic \
+		-smp 1 \
+		-kernel linux-5.9/arch/arm64/boot/Image  \
+		-initrd rootfs/rootfs.cpio   \
+		-append "rdinit=/linuxrc console=ttyAMA0"
+}
+
 #
 # 将字符串转换为函数，并调用函数
 #
