@@ -9,6 +9,23 @@ fi
 # 获取脚本所在目录的绝对路径
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
+# 定义工具链路径和下载 URL
+TOOLCHAIN_DIR="${SCRIPT_DIR}/toolchains/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu"
+TOOLCHAIN_URL="https://github.com/huloves/toolchains/releases/download/v0.1/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu.tar.xz"
+CC="${TOOLCHAIN_DIR}/bin/aarch64-none-linux-gnu-gcc"
+
+# 检查工具链是否存在，如果不存在则下载
+if [ ! -f "$CC" ]; then
+	echo "Toolchain not found. Downloading..."
+	mkdir -p "$(dirname "$TOOLCHAIN_DIR")"
+	wget -O toolchain.tar.xz "$TOOLCHAIN_URL"
+	tar -xf toolchain.tar.xz -C "$(dirname "$TOOLCHAIN_DIR")"
+	rm toolchain.tar.xz
+	echo "Toolchain installed at $TOOLCHAIN_DIR"
+else
+	echo "Toolchain found at $CC"
+fi
+
 if [ "$ARCH" == "arm64" ]; then
 	# 拼接绝对路径
 	TOOLCHAIN="${SCRIPT_DIR}/toolchains/arm-gnu-toolchain-11.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-"
@@ -98,7 +115,7 @@ function virq_hwirq()
 	cd -
 	
 	# 交叉编译内核模块
-	cd vgicv2/hwirq_module/
+	cd vgicv2/virq_hwirq_module/
 	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN KERNEL_PATH=$ABS_LINUX_PATH make all
 	cd -
 
@@ -110,12 +127,12 @@ function virq_hwirq()
 	cpio -idmv < ../rootfs.cpio
 
 	# 将hwirq_module打包进cpio中
-	cp -r ${SCRIPT_DIR}/vgicv2/hwirq_module ./
+	cp -r ${SCRIPT_DIR}/vgicv2/virq_hwirq_module ./
 	cd ..
 	( cd temp && find . | cpio -o -H newc ) > rootfs.cpio
 	cd ..
 
-	cd vgicv2/hwirq_module/
+	cd vgicv2/virq_hwirq_module/
 	ARCH=$ARCH CROSS_COMPILE=$TOOLCHAIN KERNEL_PATH=$ABS_LINUX_PATH make clean
 	cd -
 
